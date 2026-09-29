@@ -19,7 +19,7 @@ export default async function LandingPage() {
               Every line of the statement, in a spreadsheet you can trust.
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-slate-600">
-              Upload a bank statement PDF. Ledgerly extracts the transactions,
+              Upload a bank statement PDF. VELLOTALLEY extracts the transactions,
               checks every running balance, and hands you back a clean
               workbook — with anything uncertain flagged, not guessed at.
             </p>
@@ -95,7 +95,7 @@ export default async function LandingPage() {
           <h2 className="font-serif text-2xl font-semibold text-slate-900">How it works</h2>
           <div className="mt-10 grid gap-10 sm:grid-cols-3">
             <Step n={1} title="Upload the PDF">
-              Pick a client, choose the bank (or let Ledgerly detect it), and
+              Pick a client, choose the bank (or let VELLOTALLEY detect it), and
               drop in the statement.
             </Step>
             <Step n={2} title="Review what's flagged">
@@ -115,7 +115,7 @@ export default async function LandingPage() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">Built for the layouts you actually get</h2>
         <p className="mt-3 max-w-prose text-slate-600">
-          Each bank formats its statements differently. Ledgerly reads the
+          Each bank formats its statements differently. VELLOTALLEY reads the
           exact column positions for the banks below; anything else goes
           through automatic detection, with extra review built in.
         </p>
@@ -139,7 +139,7 @@ export default async function LandingPage() {
               The balance has to add up — or the row gets flagged
             </h2>
             <p className="mt-4 text-slate-600">
-              For every transaction, Ledgerly checks that the previous
+              For every transaction, VELLOTALLEY checks that the previous
               balance, minus the debit, plus the credit, equals the new
               balance printed on the statement. When it doesn&apos;t — a
               torn page, a missing figure, an unusual layout — that row is
