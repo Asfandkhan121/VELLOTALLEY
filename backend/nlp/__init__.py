@@ -1,5 +1,5 @@
 """
-Self-hosted transaction-intelligence layer for Ledgerly/Vellotalley.
+Self-hosted transaction-intelligence layer for Vellotalley.
 
 This is a SEPARATE concept from the existing statement-level extraction
 confidence (`statements.confidence`, set by the profile/heuristic/LLM
