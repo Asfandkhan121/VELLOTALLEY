@@ -1,35 +1,28 @@
-import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-/** Server-side Supabase client for server components / route handlers,
- * reading and writing the session via Next's cookie store. */
 export async function createClient() {
-  const cookieStore = await cookies();
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: { secure: process.env.NODE_ENV === 'production' },
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value, ...options });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            )
           } catch {
-            // Called from a Server Component that can't set cookies directly —
-            // middleware.ts is responsible for refreshing the session in that case.
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch {
-            // Same as above — safe to ignore outside a route handler/middleware.
+            // Called from a Server Component; the proxy refreshes sessions.
           }
         },
       },
     },
-  );
+  )
 }

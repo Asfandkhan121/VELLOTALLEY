@@ -1,62 +1,50 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import "./globals.css";
+import { Analytics } from '@vercel/analytics/next'
+import type { Metadata, Viewport } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import { Toaster } from '@/components/ui/sonner'
+import './globals.css'
+
+const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: "Ledgerly — Bank statements to clean Excel",
+  title: {
+    default: 'Vellotalley — Bank statement PDF to Excel for accountants',
+    template: '%s · Vellotalley',
+  },
   description:
-    "Upload a bank statement PDF, review the extracted transactions, and download a formatted Excel workbook. Built for bookkeepers and small accounting firms.",
-};
+    'Convert bank statement PDFs into clean, structured Excel files. Built for accountants, bookkeepers and small firms who organise statements by client.',
+  generator: 'v0.app',
+  icons: {
+    icon: [
+      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
+      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-icon.png',
+  },
+}
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f9fafb' },
+    { media: '(prefers-color-scheme: dark)', color: '#12151b' },
+  ],
+}
 
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="en">
-      <body className="flex min-h-screen flex-col font-sans antialiased">
-        <header className="border-b border-slate-200">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <Link href="/" className="font-serif text-lg font-semibold tracking-tight text-slate-900">
-              Ledgerly
-            </Link>
-            <nav className="flex items-center gap-6 text-sm">
-              <Link href="/privacy" className="text-slate-600 hover:text-slate-900">
-                Privacy
-              </Link>
-              {session ? (
-                <Link
-                  href="/dashboard"
-                  className="rounded-md bg-slate-900 px-3.5 py-1.5 font-medium text-white hover:bg-slate-800"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  className="rounded-md bg-slate-900 px-3.5 py-1.5 font-medium text-white hover:bg-slate-800"
-                >
-                  Sign in
-                </Link>
-              )}
-            </nav>
-          </div>
-        </header>
-        <div className="flex-1">{children}</div>
-        <footer className="border-t border-slate-200">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} Ledgerly.</p>
-            <div className="flex gap-4">
-              <Link href="/privacy" className="hover:text-slate-700">
-                Privacy &amp; third-party AI use
-              </Link>
-            </div>
-          </div>
-        </footer>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="antialiased">
+        {children}
+        <Toaster richColors position="top-right" />
+        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
-  );
+  )
 }
