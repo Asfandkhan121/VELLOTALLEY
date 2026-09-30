@@ -13,6 +13,10 @@ python-dotenv==1.0.1
 # per PRODUCT_VISION_AND_ROADMAP.md), pick a model deliberately then:
 #   python -m spacy download en_core_web_sm   (or whichever model/language fits)
 spacy==3.8.7
+# Fuzzy string matching for the nlp/ transaction-intelligence pipeline's
+# Tier 2 (nlp/fuzzy_matcher.py) -- merchant-description matching robust to
+# word order, punctuation, and minor misspellings/OCR variance.
+rapidfuzz==3.14.6
 # OCR fallback (ocr_extraction.py) -- only imported/used by profiles that set
 # requires_ocr=True (currently just "maerki"). Also requires the system
 # packages tesseract-ocr and poppler-utils, plus a tesseract language pack
