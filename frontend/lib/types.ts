@@ -1,0 +1,51 @@
+export type StatementStatus = 'processing' | 'completed' | 'failed'
+export type ExtractionMethod = 'profile' | 'heuristic' | 'llm'
+
+export interface Client {
+  id: string
+  name: string
+  created_at: string
+}
+
+export interface Statement {
+  id: string
+  client_id: string
+  original_filename: string
+  bank_profile: string
+  uploaded_at: string
+  status: StatementStatus
+  extraction_method: ExtractionMethod | null
+  confidence: number | string | null
+  /** Optional extraction metadata surfaced by the backend when available. */
+  layout_detected?: string | null
+  date_format_ambiguous?: boolean
+}
+
+export interface Transaction {
+  date: string | null
+  description: string | null
+  debit: string | number | null
+  credit: string | number | null
+  balance: string | number | null
+  needs_review: boolean
+}
+
+export interface ExtractionResult {
+  statement_id: string
+  transactions: Transaction[]
+  extraction_method: ExtractionMethod
+  confidence?: number | null
+  layout_detected?: string | null
+  date_format_ambiguous?: boolean
+}
+
+export interface StatementNote {
+  id: string
+  note: string
+  created_at: string
+}
+
+export interface BankProfileOption {
+  value: string
+  label: string
+}

@@ -1,26 +1,37 @@
-import { LoginForm } from "./login-form";
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { AuthShell } from '@/components/auth/auth-shell'
+import { LoginForm } from '@/components/auth/login-form'
+import { safeNextPath } from '@/lib/safe-next'
 
-export default function LoginPage({
+export const metadata: Metadata = { title: 'Log in' }
+
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string };
+  searchParams: Promise<{ next?: string; expired?: string; error?: string }>
 }) {
+  const params = await searchParams
+  const notice = params.expired
+    ? 'Your session expired. Please log in again.'
+    : params.error === 'link'
+      ? 'That link is invalid or has expired. Please try again.'
+      : null
+
   return (
-    <main className="mx-auto flex max-w-md flex-col justify-center px-6 py-24">
-      <h1 className="font-serif text-3xl font-semibold text-slate-900">Sign in</h1>
-      <p className="mt-3 text-slate-600">
-        Enter your email and we&apos;ll send you a link to sign in — no
-        password to remember.
-      </p>
-
-      {searchParams.error ? (
-        <p className="mt-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          That sign-in link didn&apos;t work — it may have expired. Request a
-          new one below.
-        </p>
-      ) : null}
-
-      <LoginForm next={searchParams.next} />
-    </main>
-  );
+    <AuthShell
+      title="Welcome back"
+      description="Log in to manage your clients and statements."
+      footer={
+        <>
+          {"Don't have an account? "}
+          <Link href="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Sign up free
+          </Link>
+        </>
+      }
+    >
+      <LoginForm next={safeNextPath(params.next)} notice={notice} />
+    </AuthShell>
+  )
 }
