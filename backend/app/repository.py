@@ -14,6 +14,9 @@ from supabase import Client, create_client
 
 from .config import Settings
 
+_STORAGE_LIST_PAGE_SIZE = 1000
+_STORAGE_DELETE_BATCH_SIZE = 1000
+
 
 class SupabaseRepository:
     def __init__(self, settings: Settings) -> None:
@@ -126,6 +129,46 @@ class SupabaseRepository:
         self.client.table("demand_signals").insert({
             "user_id": user_id, "requested_bank_profile": requested_bank_profile,
         }).execute()
+
+    def delete_account(self, user_id: str) -> None:
+        storage = self.client.storage.from_(self.bucket)
+        folders = [user_id]
+        while folders:
+            folder = folders.pop()
+            offset = 0
+            folder_files: list[str] = []
+            child_folders: list[str] = []
+
+            while True:
+                entries = storage.list(
+                    folder,
+                    {"limit": _STORAGE_LIST_PAGE_SIZE, "offset": offset},
+                )
+                if not isinstance(entries, list):
+                    raise RuntimeError("Storage returned an invalid object listing.")
+
+                for entry in entries:
+                    name = entry.get("name")
+                    if not isinstance(name, str) or not name or name in {".", ".."} or "/" in name or "\\" in name:
+                        raise RuntimeError("Storage returned an invalid object name.")
+                    path = f"{folder}/{name}"
+                    if entry.get("id") is None:
+                        child_folders.append(path)
+                    else:
+                        folder_files.append(path)
+
+                if len(entries) < _STORAGE_LIST_PAGE_SIZE:
+                    break
+                offset += len(entries)
+
+            for start in range(0, len(folder_files), _STORAGE_DELETE_BATCH_SIZE):
+                storage.remove(folder_files[start:start + _STORAGE_DELETE_BATCH_SIZE])
+            folders.extend(child_folders)
+
+        self.client.table("demand_signals").delete().eq("user_id", user_id).execute()
+        self.client.table("statement_notes").delete().eq("user_id", user_id).execute()
+        self.client.table("clients").delete().eq("user_id", user_id).execute()
+        self.client.auth.admin.delete_user(user_id, should_soft_delete=False)
 
 
 def month_start_now() -> datetime:

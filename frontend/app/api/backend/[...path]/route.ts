@@ -75,4 +75,4 @@ async function forward(request: NextRequest, context: RouteContext) {
   return new Response(upstream.body, { status: upstream.status, headers: responseHeaders })
 }
 
-export { forward as GET, forward as POST }
+export { forward as DELETE, forward as GET, forward as POST }

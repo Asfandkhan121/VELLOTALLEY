@@ -17,7 +17,7 @@ human still reviews anything flagged.
 
 ## The full vision, in order
 
-1. **Phase 1 — Converter (built, in review).** Bank statement PDF ->
+1. **Phase 1 — Converter (implemented; deployment unverified).** Bank statement PDF ->
    clean Excel, with a running-balance sanity check on every row. Global
    bank coverage. Any row whose balance can't be confirmed against the
    printed statement is flagged `needs_review` for a human — never
@@ -45,7 +45,7 @@ it, not a guess.
 
 | Tier | Status | What's in it |
 |---|---|---|
-| **Free** | Live | Conversion, all bank profiles incl. AI fallback, 3 conversions/month, notes. |
+| **Free** | Built, not deployed | Conversion, all bank profiles incl. AI fallback, 3 conversions/month, notes. |
 | **Basic** | Spec'd, not billed | Higher/unlimited conversions, priority processing. Price/cap not yet set; Stripe gated behind a working, deployed frontend. |
 | **Premium** | Vision only | Phase 2 and 3: categorization, Trial Balance, financial statements, the assistant layer. |
 
@@ -57,8 +57,10 @@ Basic, any automatic classification that isn't human-reviewed first.
 
 ## Current known gaps
 
-- No privacy policy naming the specific third-party AI provider (a
-  general "AI-assisted processing" disclosure exists in `frontend/app/privacy/page.tsx`).
+- Production deployment and its provider retention/analytics settings
+  have not been verified. The in-app privacy page documents the current
+  Anthropic fallback, service providers, data categories, and account
+  deletion, but has not had jurisdiction-specific legal review.
 - Exact Basic-tier price and conversion cap not yet set.
 - NLP layer is at Slice 1 (normalization + rules + fuzzy matching) —
   classifier, semantic-similarity, and entity-extraction tiers not built.
