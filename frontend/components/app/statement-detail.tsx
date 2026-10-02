@@ -195,6 +195,10 @@ export function StatementDetail({ id }: { id: string }) {
               </p>
             ) : null}
           </div>
+          <p className="text-xs text-muted-foreground">
+            NLP hints analyze transaction wording only. They do not verify amounts or balances and
+            never change a transaction&apos;s review flag.
+          </p>
 
           {transactions.error ? (
             <ErrorState

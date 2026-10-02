@@ -21,9 +21,9 @@ human still reviews anything flagged.
    clean Excel, with a running-balance sanity check on every row. Global
    bank coverage. Any row whose balance can't be confirmed against the
    printed statement is flagged `needs_review` for a human — never
-   silently trusted. A self-hosted NLP layer (see `backend/nlp/`) is
-   being added on top to cut manual review volume, without ever touching
-   that guarantee.
+   silently trusted. A self-hosted NLP layer (see `backend/nlp/`) provides
+   separate text-only transaction hints; it never changes extraction
+   confidence or `needs_review`.
 2. **Phase 2 — Categorization (not started).** Bank statements + cash
    books -> transactions classified into Main Heads and Sub Heads.
    Deliberately not started: the real classification conventions aren't
