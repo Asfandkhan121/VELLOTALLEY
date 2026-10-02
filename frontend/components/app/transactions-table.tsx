@@ -20,6 +20,40 @@ function ReviewFlag() {
   )
 }
 
+const RULE_LABELS: Record<string, string> = {
+  atm: 'ATM',
+  cash_withdrawal: 'Cash withdrawal',
+  bank_fee: 'Bank fee',
+  interest: 'Interest',
+  salary: 'Salary',
+  transfer: 'Transfer',
+  card_purchase: 'Card purchase',
+  utility: 'Utility',
+}
+
+function NlpHint({ transaction }: { transaction: Transaction }) {
+  const insight = transaction.nlp_insight
+  if (!insight) {
+    return <span className="text-muted-foreground">NLP hint unavailable</span>
+  }
+
+  const label = insight.rule_label ? RULE_LABELS[insight.rule_label] ?? insight.rule_label : null
+
+  if (label) {
+    return <span title="Text-only rule match; does not validate the extracted amounts.">Rule: {label}</span>
+  }
+
+  if (insight.fuzzy_match_text) {
+    return (
+      <span title={`Text-only similarity match: ${insight.fuzzy_match_text}`}>
+        Similar description ({Math.round(insight.fuzzy_similarity ?? 0)}%)
+      </span>
+    )
+  }
+
+  return <span className="text-muted-foreground">No text match</span>
+}
+
 function Amount({ value, kind }: { value: Transaction['debit']; kind: 'debit' | 'credit' | 'balance' }) {
   if (value === null || value === '' || value === undefined) {
     return <span className="text-muted-foreground/50">—</span>
@@ -46,6 +80,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
               <TableHead className="text-right">Debit</TableHead>
               <TableHead className="text-right">Credit</TableHead>
               <TableHead className="text-right">Balance</TableHead>
+              <TableHead>NLP hint</TableHead>
               <TableHead className="text-right">Review</TableHead>
             </TableRow>
           </TableHeader>
@@ -72,6 +107,9 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                 <TableCell className="text-right">
                   <Amount value={tx.balance} kind="balance" />
                 </TableCell>
+                <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
+                  <NlpHint transaction={tx} />
+                </TableCell>
                 <TableCell className="text-right">{tx.needs_review ? <ReviewFlag /> : null}</TableCell>
               </TableRow>
             ))}
@@ -93,6 +131,9 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {tx.date ? formatDate(tx.date) : 'No date'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  NLP hint: <NlpHint transaction={tx} />
                 </p>
               </div>
               {tx.needs_review ? <ReviewFlag /> : null}

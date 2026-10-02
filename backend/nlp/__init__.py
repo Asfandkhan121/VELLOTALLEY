@@ -4,13 +4,12 @@ Self-hosted transaction-intelligence layer for Vellotalley.
 This is a SEPARATE concept from the existing statement-level extraction
 confidence (`statements.confidence`, set by the profile/heuristic/LLM
 parser tiers). That answers "was the PDF read correctly?" This module
-answers a different question per transaction: "do we understand what
-this transaction is, well enough to skip human review?"
+analyzes transaction wording as a separate signal; its decision never
+suppresses human review or changes the parser's extraction fields.
 
-Nothing in this package is wired into the extraction endpoint yet. It is
-built and tested standalone first, per this project's incremental-build
-rule, and connected to the real pipeline as an explicit next step once
-this piece is reviewed.
+The extraction and transaction-preview endpoints expose these results as
+separate text-only insights. They never change parser confidence or the
+unconditional `needs_review` flag.
 
 No paid or hosted external API is called anywhere in this package. Every
 model referenced runs locally. As of this module's first version, only

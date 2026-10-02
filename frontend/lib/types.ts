@@ -28,6 +28,18 @@ export interface Transaction {
   credit: string | number | null
   balance: string | number | null
   needs_review: boolean
+  nlp_insight?: NlpInsight | null
+}
+
+export interface NlpInsight {
+  decision: 'accept' | 'review'
+  method: 'rule' | 'fuzzy_match' | 'classifier' | 'semantic_match' | 'none'
+  normalized_description: string
+  rule_label: string | null
+  rule_confidence: number | null
+  fuzzy_match_text: string | null
+  fuzzy_similarity: number | null
+  review_reasons: string[]
 }
 
 export interface ExtractionResult {

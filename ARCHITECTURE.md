@@ -47,10 +47,16 @@ Implemented so far (Slice 1): `normalizer.py` (conservative — never
 strips dates/amounts/references), `rules.py` (bank-agnostic transaction-
 type keywords), `fuzzy_matcher.py` (RapidFuzz), `pipeline.py` (combines
 them into ACCEPT/REVIEW with every evidence score kept separate, never
-averaged). Not yet built: the scikit-learn classifier, sentence-
+averaged). The extraction response and transaction-preview endpoint run
+this pipeline per statement and return a separate `nlp_insight` for each
+transaction; the statement detail page shows the text hint separately
+from the extraction review flag. Insights are recomputed from stored
+descriptions and are not persisted or trained from user data. The NLP
+decision never changes `needs_review` or `statements.confidence`. Not yet
+built: the scikit-learn classifier, sentence-
 transformers semantic similarity, GLiNER entity extraction, a persisted
-feedback/merchant-memory table, wiring into the extraction endpoint, any
-API endpoint, any UI. 12 tests, all passing.
+feedback/merchant-memory table, a learning workflow, or user-provided
+feedback UI.
 
 ## Data flow
 

@@ -15,6 +15,8 @@ from statement_converter import BANK_PROFILES, parse_statement
 from heuristic_parser import parse_statement_heuristic
 from llm_parser import parse_statement_llm, LLMExtractionError
 
+from nlp import TransactionInput, analyze_transactions
+
 from .config import Settings
 from .repository import SupabaseRepository, month_start_now
 
@@ -115,7 +117,11 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
                 statement_id, user_id, "completed",
                 extraction_method=extra.get("extraction_method"), confidence=extra.get("confidence"),
             )
-            return {"statement_id": str(statement_id), "transactions": _json_transactions(transactions), **extra}
+            return {
+                "statement_id": str(statement_id),
+                "transactions": _transactions_with_nlp_insights(_json_transactions(transactions)),
+                **extra,
+            }
         except HTTPException:
             raise
         except Exception as exc:
@@ -150,7 +156,7 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
     @app.get("/v1/statements/{statement_id}/transactions")
     def get_transactions(statement_id: UUID, user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
         _owned_statement(repo, statement_id, user_id)
-        return _json_transactions(repo.get_transactions(statement_id))
+        return _transactions_with_nlp_insights(_json_transactions(repo.get_transactions(statement_id)))
 
     @app.get("/v1/statements/{statement_id}/excel")
     def download_excel(statement_id: UUID, user_id: str = Depends(current_user)) -> FileResponse:
@@ -206,6 +212,29 @@ def _looks_like_pdf(content: bytes) -> bool:
 
 def _json_transactions(transactions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{**item, **{field: (None if item[field] is None else f"{item[field]:.2f}") for field in ("debit", "credit", "balance")}} for item in transactions]
+
+
+def _transactions_with_nlp_insights(transactions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    analyses = analyze_transactions([
+        TransactionInput(description=item.get("description") or "", date=item.get("date"))
+        for item in transactions
+    ])
+    return [
+        {
+            **transaction,
+            "nlp_insight": {
+                "decision": analysis.decision.value,
+                "method": analysis.method.value,
+                "normalized_description": analysis.normalized_description,
+                "rule_label": analysis.rule_label,
+                "rule_confidence": analysis.rule_confidence,
+                "fuzzy_match_text": analysis.fuzzy_match_text,
+                "fuzzy_similarity": analysis.fuzzy_similarity,
+                "review_reasons": analysis.review_reasons,
+            },
+        }
+        for transaction, analysis in zip(transactions, analyses, strict=True)
+    ]
 
 
 def app_factory() -> FastAPI:
