@@ -1,6 +1,7 @@
 import { Building2, CheckCircle2, Mail, Sparkles } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { SignOutButton } from '@/components/app/sign-out-button'
+import { AccountDeletionControl } from '@/components/app/account-deletion-control'
 import { PageHeader } from '@/components/shared/states'
 import {
   Card,
@@ -98,6 +99,18 @@ export default async function SettingsPage() {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle>Delete account</CardTitle>
+          <CardDescription>
+            Close your account and remove its stored application data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AccountDeletionControl />
         </CardContent>
       </Card>
     </>

@@ -9,14 +9,16 @@ export const metadata: Metadata = { title: 'Log in' }
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; expired?: string; error?: string }>
+  searchParams: Promise<{ next?: string; expired?: string; error?: string; account_deleted?: string }>
 }) {
   const params = await searchParams
-  const notice = params.expired
-    ? 'Your session expired. Please log in again.'
-    : params.error === 'link'
-      ? 'That link is invalid or has expired. Please try again.'
-      : null
+  const notice = params.account_deleted
+    ? 'Your account and associated application data have been deleted.'
+    : params.expired
+      ? 'Your session expired. Please log in again.'
+      : params.error === 'link'
+        ? 'That link is invalid or has expired. Please try again.'
+        : null
 
   return (
     <AuthShell

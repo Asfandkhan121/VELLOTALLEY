@@ -113,9 +113,10 @@ All endpoints require `Authorization: Bearer <supabase-access-token>`.
    unconditionally, for anything the heuristic or LLM tier produced.
 5. **Export** — Excel workbook with flagged rows highlighted.
 
-A separate, self-hosted NLP layer (`backend/nlp/`) is being added to
-reduce manual review volume further — see `ARCHITECTURE.md` for its
-current status. It never changes `needs_review` itself.
+A separate, self-hosted NLP layer (`backend/nlp/`) returns text-only
+transaction hints in extraction and preview responses — see
+`ARCHITECTURE.md` for its current status. It never changes
+`needs_review` itself.
 
 ## Deployment
 

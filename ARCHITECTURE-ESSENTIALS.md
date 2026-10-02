@@ -28,10 +28,13 @@ no `asChild` prop at all. This already caused a real, fixed bug once.
 
 ## Current blockers
 
-1. Nothing deployed anywhere.
-2. Real end-to-end flow (real login -> upload -> extract -> download) has
-   never happened against a reachable backend.
-3. NLP Slice 1 not yet wired into the extraction endpoint.
+1. No production deployment could be verified; the real login -> upload ->
+   extract -> download flow has not been run against a reachable backend.
+2. NLP Slice 1 is wired into extraction and transaction previews, but
+   classifier, feedback, and learning tiers are not built.
+3. Account deletion and the expanded privacy page are implemented in the
+   repository, but deletion has only been tested with mocks. Production
+   provider settings and live RLS policy drift still need review.
 
 ## Where things live
 
@@ -39,7 +42,8 @@ no `asChild` prop at all. This already caused a real, fixed bug once.
   `backend/llm_parser.py`.
 - NLP layer: `backend/nlp/`.
 - API: `backend/app/main.py`, `repository.py`, `config.py`.
-- Migrations: `backend/database/0001` through `0008`.
+- Migrations: `backend/database/`; compare repository files with deployed
+  migration history before applying schema changes.
 - Frontend: `frontend/app/`, `frontend/components/`, `frontend/lib/api.ts`
   (backend client), `frontend/proxy.ts` (the CORS-avoiding proxy).
 

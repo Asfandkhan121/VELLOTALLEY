@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Callable
 from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile, status
 from starlette.background import BackgroundTask
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -22,6 +23,7 @@ from .repository import SupabaseRepository, month_start_now
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None, repository: Any | None = None) -> FastAPI:
@@ -47,6 +49,18 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
     @app.get("/v1/clients")
     def list_clients(user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
         return repo.list_clients(user_id)
+
+    @app.delete("/v1/account", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+    def delete_account(user_id: str = Depends(current_user)) -> Response:
+        try:
+            repo.delete_account(user_id)
+        except Exception as exc:
+            logger.error("Account deletion failed with %s.", type(exc).__name__)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Account deletion could not be completed. Some data may already have been removed. Contact HELP@VELLOTALLEY.COM before retrying.",
+            ) from exc
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/v1/statements", status_code=status.HTTP_201_CREATED)
     async def upload_statement(

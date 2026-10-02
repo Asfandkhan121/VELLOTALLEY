@@ -101,6 +101,10 @@ export function listClients() {
   return requestJson<Client[]>('/v1/clients')
 }
 
+export async function deleteAccount() {
+  await send('/v1/account', { method: 'DELETE' })
+}
+
 export function createStatement(input: { clientId: string; bankProfile: string; file: File }) {
   return requestJson<Statement>('/v1/statements', {
     method: 'POST',

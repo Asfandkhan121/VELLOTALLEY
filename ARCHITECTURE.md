@@ -29,9 +29,9 @@
    column detection. Every row `needs_review = true`, unconditionally.
 3. **LLM fallback** (`backend/llm_parser.py`) — sends the PDF to
    Anthropic's API as a last resort. Same unconditional
-   `needs_review = true`. Real cost and data-sharing implications; a
-   general privacy disclosure exists, naming the specific provider is
-   still open.
+   `needs_review = true`. This has real cost and data-sharing implications;
+   `frontend/app/privacy/page.tsx` now names Anthropic and describes the
+   automatic fallback trigger.
 
 `bank_profile="auto"` walks all three tiers in order.
 
@@ -71,6 +71,19 @@ feedback UI.
 6. `GET /v1/statements` — past-conversions list.
 7. `POST /v1/statements/{id}/retry`.
 8. `POST`/`GET /v1/statements/{id}/notes`.
+9. `DELETE /v1/account` removes the account's Storage objects, demand
+   signals, notes, clients and their cascaded statement data, then deletes
+   the Supabase Auth user. Storage, database, and Auth do not share a
+   transaction, so a failed step is reported as a possible partial deletion
+   and must be resolved before retrying.
+
+## Privacy and retention
+
+The privacy page identifies account and statement data, Supabase storage,
+the conditional Anthropic PDF-processing path, the Vercel Analytics
+integration, and the account-deletion flow. Account closure is exposed in
+Settings. Provider backup retention and production analytics settings are
+deployment-controlled and must be verified for each live environment.
 
 ## Database schema (5 tables, all RLS-enabled)
 
