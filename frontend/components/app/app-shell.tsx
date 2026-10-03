@@ -44,6 +44,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     <nav aria-label="App" className="flex flex-col gap-1">
       <Button
         className="mb-3 justify-start"
+        nativeButton={false}
         render={
           <Link href="/statements/new" onClick={onNavigate}>
             <Plus aria-hidden="true" />

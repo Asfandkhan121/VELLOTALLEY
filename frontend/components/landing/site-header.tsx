@@ -27,15 +27,15 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
         </nav>
         <div className="flex items-center gap-2">
           {signedIn ? (
-            <Button render={<Link href="/dashboard" />} size="sm">
+            <Button nativeButton={false} render={<Link href="/dashboard" />} size="sm">
               Open dashboard
             </Button>
           ) : (
             <>
-              <Button render={<Link href="/login" />} variant="ghost" size="sm">
+              <Button nativeButton={false} render={<Link href="/login" />} variant="ghost" size="sm">
                 Log in
               </Button>
-              <Button render={<Link href="/signup" />} size="sm">
+              <Button nativeButton={false} render={<Link href="/signup" />} size="sm">
                 Start free
               </Button>
             </>

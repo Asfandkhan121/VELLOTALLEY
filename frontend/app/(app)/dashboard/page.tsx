@@ -84,7 +84,7 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Convert bank statement PDFs into reviewed Excel exports, and keep track of what still needs your attention."
         actions={
-          <Button render={<Link href="/statements/new" />}>
+          <Button nativeButton={false} render={<Link href="/statements/new" />}>
             <Plus aria-hidden="true" />
             New conversion
           </Button>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Recent statements</h2>
           {statementCount > 0 ? (
-            <Button variant="ghost" size="sm" render={<Link href="/statements" />}>
+            <Button nativeButton={false} variant="ghost" size="sm" render={<Link href="/statements" />}>
               View all
             </Button>
           ) : null}
@@ -134,7 +134,7 @@ export default function DashboardPage() {
             title="No statements yet"
             description="Upload a bank statement PDF to run your first conversion and review the extracted transactions."
             action={
-              <Button render={<Link href="/statements/new" />}>
+              <Button nativeButton={false} render={<Link href="/statements/new" />}>
                 <Plus aria-hidden="true" />
                 New conversion
               </Button>

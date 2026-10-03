@@ -32,6 +32,7 @@ function RowActions({ statement }: { statement: Statement }) {
         variant="ghost"
         size="icon-sm"
         aria-label={`Open ${statement.original_filename}`}
+        nativeButton={false}
         render={<Link href={`/statements/${statement.id}`} />}
       >
         <ChevronRight aria-hidden="true" />

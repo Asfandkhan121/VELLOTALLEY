@@ -43,7 +43,7 @@ function StatementsContent() {
         title="Statements"
         description="All uploaded bank statements and their conversion status."
         actions={
-          <Button render={<Link href="/statements/new" />}>
+          <Button nativeButton={false} render={<Link href="/statements/new" />}>
             <Plus aria-hidden="true" />
             New conversion
           </Button>
@@ -59,6 +59,7 @@ function StatementsContent() {
               variant="ghost"
               size="icon-xs"
               aria-label="Clear client filter"
+              nativeButton={false}
               render={<Link href="/statements" />}
             >
               <X aria-hidden="true" />
@@ -86,7 +87,7 @@ function StatementsContent() {
               : 'Convert a bank statement PDF to see it listed here with its extraction status and confidence.'
           }
           action={
-            <Button render={<Link href="/statements/new" />}>
+            <Button nativeButton={false} render={<Link href="/statements/new" />}>
               <Plus aria-hidden="true" />
               Convert a statement
             </Button>
