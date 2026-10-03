@@ -78,6 +78,7 @@ export default function ClientsPage() {
                 variant="outline"
                 size="sm"
                 className="justify-start"
+                nativeButton={false}
                 render={<Link href={`/statements?client=${client.id}`} />}
               >
                 <FileText aria-hidden="true" />

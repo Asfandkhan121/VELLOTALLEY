@@ -199,7 +199,7 @@ export function FinalCta({ signedIn }: { signedIn: boolean }) {
           <h2 className="text-2xl font-semibold tracking-tight text-balance">Stop retyping bank statements.</h2>
           <p className="text-muted-foreground">Convert your first three statements this month for free.</p>
         </div>
-        <Button render={<Link href={signedIn ? '/statements/new' : '/signup'} />} size="lg">
+        <Button nativeButton={false} render={<Link href={signedIn ? '/statements/new' : '/signup'} />} size="lg">
           {signedIn ? 'Convert a statement' : 'Create free account'}
           <ArrowRight aria-hidden="true" />
         </Button>

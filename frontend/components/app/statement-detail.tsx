@@ -26,7 +26,7 @@ import { useClientMap, useStatement, useTransactions } from '@/lib/hooks'
 
 function BackLink() {
   return (
-    <Button variant="ghost" size="sm" className="-ml-2 w-fit" render={<Link href="/statements" />}>
+    <Button nativeButton={false} variant="ghost" size="sm" className="-ml-2 w-fit" render={<Link href="/statements" />}>
       <ArrowLeft aria-hidden="true" />
       Statements
     </Button>

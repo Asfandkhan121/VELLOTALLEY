@@ -30,8 +30,9 @@ export function signUpErrorMessage(error: AuthError): string {
 }
 
 export function authRedirectUrl(nextPath = '/dashboard') {
-  const base =
-    process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? `${window.location.origin}/auth/callback`
-  const separator = base.includes('?') ? '&' : '?'
-  return `${base}${separator}next=${encodeURIComponent(nextPath)}`
+  const redirectUrl = new URL(
+    process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? `${window.location.origin}/auth/callback`,
+  )
+  redirectUrl.searchParams.set('next', nextPath)
+  return redirectUrl.toString()
 }

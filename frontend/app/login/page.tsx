@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { LoginForm } from '@/components/auth/login-form'
+import { ResendConfirmationForm } from '@/components/auth/resend-confirmation-form'
 import { safeNextPath } from '@/lib/safe-next'
 
 export const metadata: Metadata = { title: 'Log in' }
@@ -17,7 +18,7 @@ export default async function LoginPage({
     : params.expired
       ? 'Your session expired. Please log in again.'
       : params.error === 'link'
-        ? 'That link is invalid or has expired. Please try again.'
+        ? 'The confirmation link could not be completed. It may have expired, already been used, or opened in a different browser. Request a fresh link below and open it in the same browser where you signed up.'
         : null
 
   return (
@@ -33,7 +34,10 @@ export default async function LoginPage({
         </>
       }
     >
-      <LoginForm next={safeNextPath(params.next)} notice={notice} />
+      <>
+        <LoginForm next={safeNextPath(params.next)} notice={notice} />
+        {params.error === 'link' && <ResendConfirmationForm />}
+      </>
     </AuthShell>
   )
 }

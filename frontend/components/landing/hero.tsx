@@ -28,11 +28,11 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
             reconciliation.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button render={<Link href={signedIn ? '/statements/new' : '/signup'} />} size="lg">
+            <Button nativeButton={false} render={<Link href={signedIn ? '/statements/new' : '/signup'} />} size="lg">
               {signedIn ? 'Convert a statement' : 'Start converting free'}
               <ArrowRight aria-hidden="true" />
             </Button>
-            <Button render={<Link href={signedIn ? '/dashboard' : '/login'} />} size="lg" variant="outline">
+            <Button nativeButton={false} render={<Link href={signedIn ? '/dashboard' : '/login'} />} size="lg" variant="outline">
               {signedIn ? 'Open dashboard' : 'Log in'}
             </Button>
           </div>
