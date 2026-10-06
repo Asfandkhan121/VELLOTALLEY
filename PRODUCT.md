@@ -58,9 +58,9 @@ Basic, any automatic classification that isn't human-reviewed first.
 ## Current known gaps
 
 - Production deployment and its provider retention/analytics settings
-  have not been verified. The in-app privacy page documents the current
-  Anthropic fallback, service providers, data categories, and account
-  deletion, but has not had jurisdiction-specific legal review.
+  have not been verified. The in-app privacy page documents the configurable
+  LLM fallback, service providers, data categories, and account deletion,
+  but has not had jurisdiction-specific legal review.
 - Exact Basic-tier price and conversion cap not yet set.
 - NLP layer is at Slice 1 (normalization + rules + fuzzy matching) —
   classifier, semantic-similarity, and entity-extraction tiers not built.

@@ -16,6 +16,7 @@ from .config import Settings
 
 _STORAGE_LIST_PAGE_SIZE = 1000
 _STORAGE_DELETE_BATCH_SIZE = 1000
+_TRANSACTION_LIST_PAGE_SIZE = 1000
 
 
 class SupabaseRepository:
@@ -46,6 +47,7 @@ class SupabaseRepository:
             self.client.table("statements")
             .select("id", count="exact")
             .eq("user_id", user_id)
+            .eq("status", "completed")
             .gte("uploaded_at", month_start.isoformat())
             .execute()
         )
@@ -99,8 +101,22 @@ class SupabaseRepository:
         self.client.table("transactions").delete().eq("statement_id", str(statement_id)).execute()
 
     def get_transactions(self, statement_id: UUID) -> list[dict[str, Any]]:
-        response = self.client.table("transactions").select("date,description,debit,credit,balance,needs_review").eq("statement_id", str(statement_id)).order("transaction_sequence").execute()
-        return response.data or []
+        transactions: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            response = (
+                self.client.table("transactions")
+                .select("date,description,debit,credit,balance,needs_review")
+                .eq("statement_id", str(statement_id))
+                .order("transaction_sequence")
+                .range(offset, offset + _TRANSACTION_LIST_PAGE_SIZE - 1)
+                .execute()
+            )
+            page = response.data or []
+            transactions.extend(page)
+            if len(page) < _TRANSACTION_LIST_PAGE_SIZE:
+                return transactions
+            offset += len(page)
 
     def upload_pdf(self, user_id: str, statement_id: UUID, content: bytes) -> None:
         self.client.storage.from_(self.bucket).upload(f"{user_id}/{statement_id}/source.pdf", content, {"content-type": "application/pdf", "upsert": "false"})

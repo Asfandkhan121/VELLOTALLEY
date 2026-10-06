@@ -21,14 +21,14 @@ const SECTIONS = [
     title: 'How statements are processed',
     paragraphs: [
       'Statements are processed by configured bank layouts or automatic, server-side layout detection. The separate transaction-text hints are generated locally by the backend and do not change extracted values, extraction confidence, or the human-review flag.',
-      'If automatic detection fails or cannot produce a confidence of at least 0.85, the backend sends the complete statement PDF to Anthropic for extraction. This happens automatically without a separate confirmation for each upload. Do not upload a statement unless you are authorized to share it with the service and its processing providers.',
+      'If automatic detection fails or cannot produce a confidence of at least 0.85, the backend uses the configured LLM fallback. The default OpenAI-compatible provider receives extracted statement text in chunks; if Anthropic is explicitly configured instead, it receives the complete PDF. A locally hosted model keeps statement content on the backend machine. This happens automatically without a separate confirmation for each upload. Do not upload a statement unless you are authorized to share it with the service and any configured processing providers.',
     ],
   },
   {
     title: 'Service providers and storage',
     paragraphs: [
       'Supabase provides account authentication, the application database, and private storage for uploaded PDFs. The backend uses authenticated account ownership checks when serving application data.',
-      'Anthropic processes a statement PDF only when the automatic fallback described above is triggered. Vercel Web Analytics is included in production builds, subject to the deployment settings. These providers process information under their own service terms and retention practices.',
+      'The configured LLM provider processes statement content only when the automatic fallback described above is triggered. With a hosted provider, the statement text or PDF is sent to that provider; with a self-hosted local model it stays on the backend machine. Vercel Web Analytics is included in production builds, subject to the deployment settings. Hosted providers process information under their own service terms and retention practices.',
     ],
   },
   {
