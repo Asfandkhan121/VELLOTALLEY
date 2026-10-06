@@ -2,8 +2,10 @@
 
 The backend for Vellotalley, a global bank-statement-to-Excel converter
 for bookkeepers, with a self-hosted NLP transaction-intelligence layer
-(`nlp/`) and a three-tier extraction system (bank profile -> heuristic ->
-LLM fallback). The frontend lives in `../frontend/` (Next.js). See
+(`nlp/`) and a three-tier extraction system (bank profile -> local
+header/statistical heuristic -> optional LLM fallback). Column mapping in
+the heuristic tier is implemented in code and does not require a remote AI
+provider. The frontend lives in `../frontend/` (Next.js). See
 `../ARCHITECTURE.md` for the full picture and `../PRODUCT.md` for the
 product vision -- this file only covers running the backend itself.
 
@@ -28,7 +30,7 @@ uvicorn app.main:app_factory --factory --reload
 
 All endpoints require `Authorization: Bearer <Supabase access token>`.
 
-1. `POST /v1/statements` (multipart: `client_id`, `bank_profile`, `file`) validates the profile/PDF/client ownership, enforces three current-month conversions, uploads the source PDF, and creates a processing statement.
+1. `POST /v1/statements` (multipart: `client_id`, `bank_profile`, `file`) validates the profile/PDF/client ownership, enforces the configured current-month conversion limit (except for server-configured IDs in `FREE_UNLIMITED_USER_IDS`), uploads the source PDF, and creates a processing statement.
 2. `POST /v1/statements/{statement_id}/extract` downloads the source PDF, parses it, saves transactions, marks completion, and returns the preview JSON.
 3. `GET /v1/statements` lists only the current user's statements.
 4. `GET /v1/statements/{statement_id}/excel` regenerates and downloads the workbook after verifying ownership.

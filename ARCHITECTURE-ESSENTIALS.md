@@ -14,8 +14,8 @@ shadcn/Base UI), nothing deployed yet, Phase 1 code-complete.
    ACCEPT/REVIEW decision must never be merged with it.
 2. **Ownership checks are server-side**, against the real authenticated
    user ID. RLS is backup, not the only line of defense.
-3. **Secrets never go in frontend code.** Service-role key, Anthropic key
-   — backend-only, always.
+3. **Secrets never go in frontend code.** Service-role key and any
+   configured LLM provider key — backend-only, always.
 4. **`statement_notes`/`demand_signals` are read-and-store only.**
 5. **Don't build Phase 2/3** (categorization, Trial Balance, financial
    statements) until Phase 1 has real usage data.

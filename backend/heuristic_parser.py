@@ -32,6 +32,7 @@ from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 import re
+import unicodedata
 from typing import Any
 
 import pdfplumber
@@ -83,12 +84,124 @@ _DATE_INLINE = re.compile(
 )
 _DATE_INLINE_MULTI = re.compile(r"\b\d{1,2}\s+[A-Za-z]{3}\s+\d{2,4}\b", re.IGNORECASE)
 
+_HEADER_ALIASES = {
+    "value_date": (
+        "value date", "val date", "value dt", "val dt", "fecha valor", "fecha de valor",
+        "valeur date", "valuta datum",
+    ),
+    "debit": (
+        "debit amount", "withdrawals", "withdrawal", "debit", "dr amount", "dr",
+        "debito", "débito", "débit", "retiro", "retirada", "saída", "مدين",
+    ),
+    "credit": (
+        "credit amount", "deposits", "deposit", "credit", "cr amount", "cr",
+        "credito", "crédito", "depósito", "deposito", "abono", "entrada", "dépôt", "دائن",
+    ),
+    "description": (
+        "transaction description", "transaction details", "particulars", "narration",
+        "description", "details", "remarks", "memo", "payee", "concepto", "descripción",
+        "detalle", "detalles", "libellé", "beschreibung", "narración", "البيان", "الوصف",
+    ),
+    "balance": (
+        "running balance", "available balance", "ledger balance", "balance",
+        "saldo", "solde", "رصيد", "الرصيد",
+    ),
+    "amount": (
+        "transaction amount", "withdrawal amount", "deposit amount", "payment amount", "amount",
+        "importe", "montante", "montant", "betrag", "المبلغ",
+    ),
+    "date": (
+        "transaction date", "trans date", "txn date", "posting date", "posted date", "booking date",
+        "date", "fecha", "data", "datum", "tarih", "التاريخ", "تاريخ",
+    ),
+}
+
 _MONTHS = {
     m.upper(): i
     for i, m in enumerate(
         ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], start=1
     )
 }
+
+
+def _normalize_header_text(text: str) -> str:
+    normalized = "".join(
+        char for char in unicodedata.normalize("NFKD", text.lower())
+        if not unicodedata.combining(char)
+    )
+    return " ".join(re.sub(r"[^\w]", "", token) for token in normalized.split()).strip()
+
+
+def _header_role(words: list[dict[str, Any]]) -> str | None:
+    tokens = [_normalize_header_text(word["text"]) for word in words]
+    tokens = [token for token in tokens if token]
+    phrase = " ".join(tokens)
+    for role, aliases in _HEADER_ALIASES.items():
+        for alias in aliases:
+            alias = _normalize_header_text(alias)
+            if phrase == alias or phrase.startswith(f"{alias} "):
+                return role
+    return None
+
+
+def _detect_header_columns(
+    rows: list[list[dict[str, Any]]], page_width: float, max_header_gap: float = 10.0,
+) -> dict[str, Any] | None:
+    """Use printed table headings to map fields before guessing from values."""
+    best: tuple[int, list[list[dict[str, Any]]], dict[str, list[dict[str, Any]]]] | None = None
+    for row in rows:
+        groups: list[list[dict[str, Any]]] = []
+        for word in sorted(row, key=lambda item: item["x0"]):
+            if not groups or word["x0"] - groups[-1][-1]["x1"] > max_header_gap:
+                groups.append([word])
+            else:
+                groups[-1].append(word)
+
+        roles: dict[str, list[dict[str, Any]]] = {}
+        for group in groups:
+            role = _header_role(group)
+            if role and role not in roles:
+                roles[role] = group
+
+        has_date = "date" in roles or "value_date" in roles
+        has_description = "description" in roles
+        has_amount = any(role in roles for role in ("amount", "debit", "credit", "balance"))
+        if not (has_date and has_description and has_amount):
+            continue
+
+        score = len(roles)
+        if best is None or score > best[0]:
+            best = (score, groups, roles)
+
+    if best is None:
+        return None
+
+    _, groups, roles = best
+    groups.sort(key=lambda group: group[0]["x0"])
+    bounds: dict[str, tuple[float, float]] = {}
+    for role, group in roles.items():
+        index = groups.index(group)
+        left = (
+            (groups[index - 1][-1]["x1"] + group[0]["x0"]) / 2
+            if index > 0 else 0.0
+        )
+        right = (
+            groups[index + 1][0]["x0"]
+            if role == "description" and index + 1 < len(groups)
+            else (group[-1]["x1"] + groups[index + 1][0]["x0"]) / 2
+            if index + 1 < len(groups)
+            else page_width
+        )
+        if left < right:
+            bounds[role] = (left, right)
+
+    if "date" not in bounds and "value_date" not in bounds:
+        return None
+    if "description" not in bounds:
+        return None
+    if not any(role in bounds for role in ("amount", "debit", "credit")):
+        return None
+    return {"bounds": bounds, "layout": "header"}
 
 
 def _looks_like_money(text: str) -> bool:
@@ -222,10 +335,10 @@ def _date_windows(row: list[dict[str, Any]]) -> list[tuple[float, float, str]]:
 
 
 def _detect_day_first(date_texts: list[str]) -> tuple[bool, bool]:
-    """Look for at least one date whose first numeric part exceeds 12 --
-    that alone proves the convention for numeric dates in this document,
-    since no month can be 13+. Returns (day_first, was_ambiguous)."""
+    """Look for an explicit date convention; return (day_first, ambiguous)."""
     for text in date_texts:
+        if re.fullmatch(r"\d{1,2}[-/]?[A-Za-z]{3}[-/]?\d{2,4}", text.strip()):
+            return True, False
         m = re.match(r"^(\d{1,2})[/.\-](\d{1,2})[/.\-]\d{2,4}$", text.strip())
         if m:
             a, b = int(m.group(1)), int(m.group(2))
@@ -234,6 +347,40 @@ def _detect_day_first(date_texts: list[str]) -> tuple[bool, bool]:
             if b > 12:
                 return False, False
     return True, True  # no disambiguating date found; default to day-first, flagged ambiguous
+
+
+def _uses_grouped_primary_dates(
+    rows: list[list[dict[str, Any]]],
+    bounds: dict[str, tuple[float, float]],
+    day_first: bool,
+) -> bool:
+    if not {"date", "value_date", "amount"}.issubset(bounds):
+        return False
+    transactions = 0
+    primary_dates = 0
+    for row in rows:
+        if _amount(_text(row, bounds["amount"])) is None:
+            continue
+        value_date = _parse_date_any(_text(row, bounds["value_date"]), day_first)
+        if value_date is None:
+            continue
+        transactions += 1
+        if _parse_date_any(_text(row, bounds["date"]), day_first) is not None:
+            primary_dates += 1
+    return transactions >= 5 and primary_dates * 2 < transactions
+
+
+def _transaction_date(
+    primary_date: tuple[int, int, int] | None,
+    value_date: tuple[int, int, int] | None,
+    previous_primary_date: tuple[int, int, int] | None,
+    grouped_primary_dates: bool,
+) -> tuple[int, int, int] | None:
+    if primary_date is not None:
+        return primary_date
+    if grouped_primary_dates and previous_primary_date is not None:
+        return previous_primary_date
+    return value_date
 
 
 def _detect_columns(rows: list[list[dict[str, Any]]]) -> dict[str, Any] | None:
@@ -380,13 +527,110 @@ def _column_bounds(columns: dict[str, Any]) -> dict[str, Any] | None:
         }
     else:
         (amount_bound,) = _bounds_for_buckets(amount_buckets)
+        description_bounds = (date_end, amount_bound[0])
+        if description_bounds[0] >= description_bounds[1]:
+            # Some layouts put the description before the date column.
+            description_bounds = (0.0, date_start)
         layout = "amount_only"
         bounds = {
             "date": (date_start, date_end),
-            "description": (date_end, amount_bound[0]),
+            "description": description_bounds,
             "amount": amount_bound,
         }
     return {"layout": layout, "bounds": bounds}
+
+
+_DEBIT_DESCRIPTION = re.compile(
+    r"\b(debit|debito|débito|withdraw\w*|retiro|retirada|saque|retrait|"
+    r"abhebung|belastung|payment|pagamento|paid|charge|fee|tax|outward|"
+    r"transfer\s+to|money\s+out|dr|to|سحب|مدين)\b",
+    re.IGNORECASE,
+)
+_CREDIT_DESCRIPTION = re.compile(
+    r"\b(credit|credito|crédito|deposit\w*|depósito|abono|ingreso|"
+    r"gutschrift|einzahlung|dépôt|received|refund|interest|inward|"
+    r"transfer\s+from|money\s+in|cr|by|from|إيداع|دائن)\b",
+    re.IGNORECASE,
+)
+
+_AMOUNT_DIRECTION_MARKER = re.compile(r"(?<!\w)(?:DB|DR|DEBIT|CR|CREDIT)(?!\w)", re.IGNORECASE)
+
+
+def _amount_direction_marker(amount_text: str) -> str | None:
+    markers = {marker.upper() for marker in _AMOUNT_DIRECTION_MARKER.findall(amount_text)}
+    if markers & {"DB", "DR", "DEBIT"}:
+        return "debit"
+    if markers & {"CR", "CREDIT"}:
+        return "credit"
+    return None
+
+
+def _associate_nearby_balances(
+    rows: list[list[dict[str, Any]]],
+    transaction_indices: list[int],
+    balance_bounds: tuple[float, float],
+    max_vertical_distance: float = 10.0,
+) -> dict[int, Decimal]:
+    """Attach balance cells printed on a neighboring baseline to transactions."""
+    transaction_tops = sorted(
+        (rows[index][0]["top"], index)
+        for index in transaction_indices
+        if rows[index]
+    )
+    attached: dict[int, tuple[float, Decimal]] = {}
+    for row in rows:
+        if not row or "opening balance" in " ".join(word["text"] for word in row).lower():
+            continue
+        balance = _amount(_text(row, balance_bounds))
+        if balance is None:
+            continue
+        top = row[0]["top"]
+        preceding = [(transaction_top, index) for transaction_top, index in transaction_tops if transaction_top <= top]
+        if not preceding:
+            continue
+        transaction_top, index = preceding[-1]
+        distance = top - transaction_top
+        if distance > max_vertical_distance:
+            continue
+        previous = attached.get(index)
+        if previous is None or distance < previous[0]:
+            attached[index] = (distance, balance)
+    return {index: balance for index, (_, balance) in attached.items()}
+
+
+def _amount_direction(
+    amount: Decimal,
+    description: str,
+    balance: Decimal | None,
+    prior_balance: Decimal | None,
+    amount_text: str = "",
+    marker_scheme: bool = False,
+) -> str:
+    marker_direction = _amount_direction_marker(amount_text)
+    if marker_direction is not None:
+        return marker_direction
+    if marker_scheme:
+        return "credit"
+    if amount < 0:
+        return "debit"
+    if balance is not None and prior_balance is not None and balance != prior_balance:
+        return "debit" if balance < prior_balance else "credit"
+    debit_match = _DEBIT_DESCRIPTION.search(description)
+    credit_match = _CREDIT_DESCRIPTION.search(description)
+    if debit_match != credit_match:
+        return "debit" if debit_match else "credit"
+    return "credit"
+
+
+def _amount_columns(
+    amount: Decimal,
+    direction: str,
+    marker_scheme: bool,
+) -> tuple[Decimal | None, Decimal | None]:
+    value = amount if marker_scheme else abs(amount)
+    if direction == "debit":
+        return value, None
+    return None, value
 
 
 def parse_statement_heuristic(pdf_path: str, sample_pages: int = 15) -> dict[str, Any]:
@@ -413,29 +657,167 @@ def parse_statement_heuristic(pdf_path: str, sample_pages: int = 15) -> dict[str
         for page in pages[:sample_pages]:
             sample_rows.extend(_cluster_rows(page.extract_words(x_tolerance=1, y_tolerance=1)))
 
-        columns = _detect_columns(sample_rows)
-        if columns is None:
-            return {
-                "transactions": [], "layout_detected": None, "confidence": None,
-                "date_format_ambiguous": False, "column_detection_failed": True,
-            }
+        header_layout = _detect_header_columns(sample_rows, pages[0].width)
+        columns = None if header_layout else _detect_columns(sample_rows)
+        if header_layout:
+            bounds = header_layout["bounds"]
+            layout = "header_mapped"
+            date_field = "date" if "date" in bounds else "value_date"
+            date_samples = [_text(row, bounds[date_field]) for row in sample_rows]
+            day_first, date_format_ambiguous = _detect_day_first(date_samples)
+            grouped_primary_dates = _uses_grouped_primary_dates(
+                sample_rows, bounds, day_first,
+            )
+        else:
+            if columns is None:
+                return {
+                    "transactions": [], "layout_detected": None, "confidence": None,
+                    "date_format_ambiguous": False, "column_detection_failed": True,
+                }
 
-        layout_info = _column_bounds(columns)
-        if layout_info is None:
-            return {
-                "transactions": [], "layout_detected": None, "confidence": None,
-                "date_format_ambiguous": columns["date_format_ambiguous"], "column_detection_failed": True,
-            }
+            layout_info = _column_bounds(columns)
+            if layout_info is None:
+                return {
+                    "transactions": [], "layout_detected": None, "confidence": None,
+                    "date_format_ambiguous": columns["date_format_ambiguous"], "column_detection_failed": True,
+                }
 
-        bounds = layout_info["bounds"]
-        layout = layout_info["layout"]
-        day_first = columns["day_first"]
+            bounds = layout_info["bounds"]
+            layout = layout_info["layout"]
+            day_first = columns["day_first"]
+            date_format_ambiguous = columns["date_format_ambiguous"]
+            grouped_primary_dates = False
 
+        marker_direction_scheme = bool(
+            header_layout
+            and "amount" in bounds
+            and "balance" in bounds
+            and not any(role in bounds for role in ("debit", "credit"))
+            and any(
+                _amount_direction_marker(_text(row, bounds["amount"]))
+                for row in sample_rows
+            )
+        )
         transactions: list[dict[str, Any]] = []
         current: dict[str, Any] | None = None
+        prior_header_balance: Decimal | None = None
+        opening_balance: Decimal | None = None
+        last_primary_date: tuple[int, int, int] | None = None
         for page in pages:
             rows = _cluster_rows(page.extract_words(x_tolerance=1, y_tolerance=1))
-            for row in rows:
+            page_balances: dict[int, Decimal] = {}
+            footer_started = False
+            table_started = False
+            if marker_direction_scheme:
+                transaction_indices = []
+                for index, candidate_row in enumerate(rows):
+                    candidate_date = _text(candidate_row, bounds["date"]) if "date" in bounds else ""
+                    parsed = _parse_date_any(candidate_date, day_first) if candidate_date else None
+                    if parsed is None and "value_date" in bounds:
+                        candidate_date = _text(candidate_row, bounds["value_date"])
+                        parsed = _parse_date_any(candidate_date, day_first) if candidate_date else None
+                    if parsed and _amount(_text(candidate_row, bounds["amount"])) is not None:
+                        transaction_indices.append(index)
+                page_balances = _associate_nearby_balances(
+                    rows, transaction_indices, bounds["balance"],
+                )
+
+            for row_index, row in enumerate(rows):
+                if header_layout:
+                    row_label = " ".join(word["text"] for word in row).lower()
+                    if not table_started:
+                        if "opening balance" in row_label:
+                            opening_balance = _amount(_text(row, bounds["balance"]))
+                            continue
+                        candidate_date = _text(row, bounds["date"]) if "date" in bounds else ""
+                        candidate_parsed_date = (
+                            _parse_date_any(candidate_date, day_first) if candidate_date else None
+                        )
+                        if candidate_parsed_date is None and "value_date" in bounds:
+                            candidate_value_date = _text(row, bounds["value_date"])
+                            candidate_parsed_date = (
+                                _parse_date_any(candidate_value_date, day_first)
+                                if candidate_value_date else None
+                            )
+                        candidate_amount = any(
+                            _amount(_text(row, bounds[key])) is not None
+                            for key in ("amount", "debit", "credit")
+                            if key in bounds
+                        )
+                        if candidate_parsed_date is None or not candidate_amount:
+                            continue
+                        table_started = True
+                    if any(marker in row_label for marker in (
+                        "closing balance", "total withdrawals", "total deposits",
+                    )) or row_label.lstrip().startswith("notice"):
+                        footer_started = True
+                    if footer_started:
+                        continue
+                    raw_date = _text(row, bounds["date"]) if "date" in bounds else ""
+                    primary_date = _parse_date_any(raw_date, day_first) if raw_date else None
+                    value_date_text = _text(row, bounds["value_date"]) if "value_date" in bounds else ""
+                    value_date = _parse_date_any(value_date_text, day_first) if value_date_text else None
+
+                    debit = _zero_to_none(abs(_amount(_text(row, bounds["debit"])))) if "debit" in bounds else None
+                    credit = _zero_to_none(abs(_amount(_text(row, bounds["credit"])))) if "credit" in bounds else None
+                    amount_text = _text(row, bounds["amount"]) if "amount" in bounds else ""
+                    amount = _amount(amount_text) if amount_text else None
+                    if (
+                        grouped_primary_dates
+                        and primary_date is not None
+                        and amount is not None
+                        and "opening balance" not in row_label
+                    ):
+                        last_primary_date = primary_date
+                    parsed = _transaction_date(
+                        primary_date, value_date, last_primary_date, grouped_primary_dates,
+                    )
+
+                    raw_balance = _amount(_text(row, bounds["balance"])) if "balance" in bounds else None
+                    if "opening balance" in row_label and raw_balance is not None:
+                        opening_balance = raw_balance
+                    balance = (
+                        page_balances.get(row_index)
+                        if marker_direction_scheme
+                        else raw_balance
+                    )
+                    description = _strip_stray_dates(_text(row, bounds["description"]))
+                    if "amount" in bounds:
+                        if amount is not None:
+                            direction = _amount_direction(
+                                amount, description, balance, prior_header_balance,
+                                amount_text, marker_direction_scheme,
+                            )
+                            debit, credit = _amount_columns(
+                                amount, direction, marker_direction_scheme,
+                            )
+                            debit = _zero_to_none(debit)
+                            credit = _zero_to_none(credit)
+
+                    has_amount = debit is not None or credit is not None
+                    if parsed and has_amount:
+                        if current is not None:
+                            transactions.append(current)
+                        year, month, day = parsed
+                        try:
+                            iso_date = datetime(year, month, day).date().isoformat()
+                        except ValueError:
+                            iso_date = None
+                        current = {
+                            "date": iso_date,
+                            "description_parts": [description],
+                            "debit": debit,
+                            "credit": credit,
+                            "balance": balance,
+                        }
+                    elif current is not None:
+                        continuation = _strip_stray_dates(_text(row, bounds["description"]))
+                        if continuation:
+                            current["description_parts"].append(continuation)
+                    if balance is not None:
+                        prior_header_balance = balance
+                    continue
+
                 date_text = _text(row, bounds["date"])
                 parsed = _parse_date_any(date_text, day_first) if date_text else None
                 # Require BOTH a plausible date AND a real amount somewhere
@@ -493,7 +875,7 @@ def parse_statement_heuristic(pdf_path: str, sample_pages: int = 15) -> dict[str
     # but it does matter for the confidence score below: without it, one
     # row with no printed balance breaks the chain for every row after it,
     # not just that one row.
-    prior_balance: Decimal | None = None
+    prior_balance: Decimal | None = opening_balance
     checked = 0
     matched = 0
     result: list[dict[str, Any]] = []
@@ -522,6 +904,6 @@ def parse_statement_heuristic(pdf_path: str, sample_pages: int = 15) -> dict[str
         "transactions": result,
         "layout_detected": layout,
         "confidence": (matched / checked) if checked else None,
-        "date_format_ambiguous": columns["date_format_ambiguous"],
+        "date_format_ambiguous": date_format_ambiguous,
         "column_detection_failed": False,
     }

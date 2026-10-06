@@ -14,7 +14,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from excel_export import export_to_excel
 from statement_converter import BANK_PROFILES, parse_statement
 from heuristic_parser import parse_statement_heuristic
-from llm_parser import parse_statement_llm, LLMExtractionError
+from llm_parser import parse_statement_llm_configured, LLMExtractionError
 
 from nlp import TransactionInput, analyze_transactions
 
@@ -24,6 +24,14 @@ from .repository import SupabaseRepository, month_start_now
 
 bearer_scheme = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
+
+
+def _should_use_llm_fallback(heuristic_result: dict[str, Any]) -> bool:
+    """Missing balance confidence is not low extraction confidence."""
+    confidence = heuristic_result["confidence"]
+    return heuristic_result["column_detection_failed"] or (
+        confidence is not None and confidence < 0.85
+    )
 
 
 def create_app(settings: Settings | None = None, repository: Any | None = None) -> FastAPI:
@@ -80,7 +88,10 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
             raise HTTPException(status_code=415, detail="The upload is not a valid PDF file.")
         if not repo.client_belongs_to_user(client_id, user_id):
             raise HTTPException(status_code=404, detail="Client not found.")
-        if repo.monthly_conversion_count(user_id, month_start_now()) >= runtime_settings.free_monthly_limit:
+        if (
+            user_id.lower() not in runtime_settings.unlimited_conversion_user_ids
+            and repo.monthly_conversion_count(user_id, month_start_now()) >= runtime_settings.free_monthly_limit
+        ):
             raise HTTPException(status_code=429, detail="Free-tier limit reached: three conversions per calendar month.")
 
         statement_id = uuid4()
@@ -103,10 +114,9 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
                 source_path = source.name
             if statement["bank_profile"] == "auto":
                 heuristic_result = parse_statement_heuristic(source_path)
-                low_confidence = heuristic_result["confidence"] is None or heuristic_result["confidence"] < 0.85
-                if heuristic_result["column_detection_failed"] or low_confidence:
+                if _should_use_llm_fallback(heuristic_result):
                     try:
-                        llm_result = parse_statement_llm(source_path, runtime_settings.anthropic_api_key)
+                        llm_result = parse_statement_llm_configured(source_path, runtime_settings)
                     except LLMExtractionError as exc:
                         repo.set_statement_status(statement_id, user_id, "failed")
                         raise HTTPException(status_code=422, detail=f"Could not read this statement automatically: {exc}") from exc
@@ -123,6 +133,12 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
             else:
                 transactions = parse_statement(source_path, statement["bank_profile"])
                 extra = {"extraction_method": "profile"}
+            if not transactions:
+                repo.set_statement_status(statement_id, user_id, "failed")
+                raise HTTPException(
+                    status_code=422,
+                    detail="No transactions could be extracted from this statement.",
+                )
             # Idempotent: a retry after a partial failure (or a plain repeat
             # call) must never leave duplicate rows behind.
             repo.delete_transactions(statement_id)

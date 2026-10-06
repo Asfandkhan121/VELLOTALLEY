@@ -25,15 +25,33 @@
    column layouts per bank. Highest confidence. 11 profiles across
    Pakistan, UAE, Egypt, Switzerland, China — 3 Pakistani ones (MCB,
    Samba, FWB) verified against real sample PDFs; the other 8 are not.
-2. **Heuristic fallback** (`backend/heuristic_parser.py`) — statistical
-   column detection. Every row `needs_review = true`, unconditionally.
-3. **LLM fallback** (`backend/llm_parser.py`) — sends the PDF to
-   Anthropic's API as a last resort. Same unconditional
-   `needs_review = true`. This has real cost and data-sharing implications;
-   `frontend/app/privacy/page.tsx` now names Anthropic and describes the
-   automatic fallback trigger.
+2. **Heuristic fallback** (`backend/heuristic_parser.py`) — first reads
+   printed column headings (including common Spanish, French, German,
+   Portuguese and Arabic labels) and maps their page coordinates; if no
+   usable headings are present, it falls back to statistical column
+   detection. This parsing and column assignment run locally in code and do
+   not require an AI provider. Header-mapped statements with a single
+   Amount column can use inline debit/credit markers (for example, `DB`
+   beside outgoing amounts); signed amounts stay signed in the column
+   indicated by the marker convention, so reversals reconcile with printed
+   debit/credit totals. Summary/footer text is not appended to the last
+   transaction. Balance cells printed after a transaction group are attached
+   only to the preceding transaction, not a nearby upcoming transaction;
+   opening balances seed the running-balance check. Sparse transaction-date
+   columns are carried down separately from populated value dates. Every row
+   `needs_review = true`, unconditionally.
+3. **LLM fallback** (`backend/llm_parser.py`) — extracts a PDF's text layer
+   and sends it in chunks to a configurable OpenAI-compatible endpoint by
+   default; Anthropic remains an optional provider. Scanned PDFs without a
+   text layer cannot use this fallback. Same unconditional
+   `needs_review = true`. Hosted providers receive statement text; local
+   self-hosted providers keep it on the user's machine.
 
-`bank_profile="auto"` walks all three tiers in order.
+`bank_profile="auto"` tries a known profile, then the local header/statistical
+parser. The optional LLM fallback is used only when column detection fails or
+a reported running-balance confidence is below 0.85. A missing balance column
+alone is not treated as low-confidence extraction. Scanned PDFs still need an
+OCR-capable path; the text-based heuristic does not claim to read them.
 
 ## NLP transaction-intelligence layer (backend/nlp/) — separate from the above
 

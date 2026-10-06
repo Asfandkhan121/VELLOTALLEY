@@ -104,9 +104,17 @@ All endpoints require `Authorization: Bearer <supabase-access-token>`.
 2. **Extract** — runs one of three tiers, in order:
    - **Profile** — bank-specific column-position extraction (fastest,
      most reliable, in `statement_converter.py`)
-   - **Heuristic** — layout-based fallback for banks with no profile
-   - **LLM** — Claude-based extraction, used when heuristic confidence
-     is below 0.85 (see `app/main.py`) or `bank_profile="auto"` needs it
+   - **Heuristic** — locally maps printed column headings and their page
+     coordinates (including common Spanish, French, German, Portuguese and
+     Arabic labels); uses statistical layout detection when headings are
+     absent. Column assignment does not require a remote AI provider.
+   - **LLM** — text extraction through any OpenAI-compatible endpoint
+     (self-hosted Ollama, or a free-tier hosted API; see `LLM_*` in
+     `backend/.env.example`), an optional fallback used when column detection
+     fails or a reported running-balance confidence is below 0.85. A missing
+     balance column alone does not trigger it. Scanned
+     PDFs with no text layer can't be read by this tier. Claude remains
+     available as an optional provider (`LLM_PROVIDER=anthropic`)
 3. **Validate** — every transaction checked against
    `previous_balance - debit + credit = new_balance`.
 4. **Flag** — rows that don't reconcile are marked `needs_review: true`,
@@ -131,8 +139,8 @@ Nothing is deployed yet. When ready:
 
 ## Security notes
 
-- The Supabase service-role key and the Anthropic API key are
-  backend-only. Never put either in frontend code or commit them.
+- The Supabase service-role key and all LLM provider API keys are
+  backend-only. Never put them in frontend code or commit them.
 - Every endpoint checks resource ownership server-side against the
   authenticated user's ID from their bearer token — never a
   client-supplied ID.
@@ -148,8 +156,10 @@ Nothing is deployed yet. When ready:
 - **Backend won't start**: `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`
   missing or wrong — `config.py` raises a clear `RuntimeError` naming
   which one.
-- **`auto` extraction fails**: `ANTHROPIC_API_KEY` isn't set. This is
-  optional — the app runs fine without it, but the LLM tier can't run.
+- **`auto` extraction fails**: inspect the returned parser error and the PDF's
+  text layer/layout first. The local column parser does not require an LLM;
+  the optional LLM fallback can still fail if `LLM_MODEL` is unset or
+  `LLM_BASE_URL` is unreachable. Scanned PDFs need an OCR-capable path.
 - **Frontend can't reach the backend**: check `BACKEND_API_URL` in
   `frontend/.env.local` points at a reachable backend.
 
