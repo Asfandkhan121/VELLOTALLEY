@@ -1,7 +1,7 @@
 -- PROPOSED seed (lives in proposed/ on purpose: NOT part of the numbered migration sequence and not applied automatically), derived by script from the draft normalization map of five
 -- SSES/POF GLs (C1, C2, C7, C9, centralized). NOT owner-approved: review every
 -- row before merging. Rules used: sub heads with >=5 rows across those GLs
--- (115 heads, ~97% of classified rows); rarer sub heads and raw main heads
+-- (114 heads, ~97% of classified rows); rarer sub heads and raw main heads
 -- such as 'Misscilinieus' / 'Repair and mantainance' are deliberately left
 -- unmapped (they belong in review, not silently merged). Bank-side rows
 -- (Cash at bank, Bank Account) are not heads: bank is a column, not a head.
@@ -37,10 +37,9 @@ insert into public.account_heads (main_head, sub_head) values
     ('Accrued and Other Liabilities', 'Student Security Deposits Payable'),
     ('Accrued and Other Liabilities', 'Utility'),
     ('Accrued and Other Liabilities', 'Withholding Tax/Income Tax Payable'),
-    ('Assets', '(bank-side)'),
     ('Assets', 'Advance Tax'),
     ('Assets', 'Fees & Funds Receivable'),
-    ('Assets', 'Inter-Account Transfer (From Pls Account)'),
+    ('Assets', 'Inter-Account Transfer (From PLS Account)'),
     ('Assets', 'Inter-Bank Transfer'),
     ('Assets', 'Inter-Campus Loan Receivable'),
     ('Assets', 'Inter-Entity Loan Receivable - Nasheeman'),
@@ -158,14 +157,13 @@ from (values
     ('accrued and other liabilities', 'withholding tax payable', 'Accrued and Other Liabilities', 'Withholding Tax/Income Tax Payable'),
     ('assets', 'fee & funds recievable', 'Assets', 'Fees & Funds Receivable'),
     ('assets', 'fees & funds receivable', 'Assets', 'Fees & Funds Receivable'),
-    ('assets', 'inter-account transfer (from pls account)', 'Assets', 'Inter-Account Transfer (From Pls Account)'),
+    ('assets', 'inter-account transfer (from pls account)', 'Assets', 'Inter-Account Transfer (From PLS Account)'),
     ('assets', 'inter-bank transfer', 'Assets', 'Inter-Bank Transfer'),
     ('assets', 'inter-campus loan receivable', 'Assets', 'Inter-Campus Loan Receivable'),
     ('assets', 'inter-entity loan receivable - nasheeman', 'Assets', 'Inter-Entity Loan Receivable - Nasheeman'),
     ('assets', 'receivable from head office', 'Assets', 'Receivable from SSES Head Office'),
     ('assets', 'receivable from sses head office', 'Assets', 'Receivable from SSES Head Office'),
     ('current assets', 'advance tax', 'Assets', 'Advance Tax'),
-    ('current assets', 'cash at bank', 'Assets', '(bank-side)'),
     ('current assets', 'fee income - receivable', 'Assets', 'Fees & Funds Receivable'),
     ('expenses', 'advertising expense', 'Expenses', 'Advertising Expense'),
     ('expenses', 'affiliation & registration fees', 'Expenses', 'Affiliation & Registration Fees'),
