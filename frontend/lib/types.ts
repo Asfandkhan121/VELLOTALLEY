@@ -1,6 +1,12 @@
 export type StatementStatus = 'processing' | 'completed' | 'failed'
 export type ExtractionMethod = 'profile' | 'heuristic' | 'llm'
 
+export interface AccountHead {
+  id: string
+  main_head: string
+  sub_head: string
+}
+
 export interface Client {
   id: string
   name: string

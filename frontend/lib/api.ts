@@ -166,6 +166,7 @@ export async function downloadExcel(statementId: string, fallbackName?: string) 
 
 export const apiKeys = {
   clients: '/v1/clients',
+  accountHeads: '/v1/account-heads',
   statements: '/v1/statements',
   statement: (id: string) => `/v1/statements/${id}`,
   transactions: (id: string) => `/v1/statements/${id}/transactions`,
