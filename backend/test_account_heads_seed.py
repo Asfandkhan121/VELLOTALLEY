@@ -40,3 +40,6 @@ def test_aliases_are_normalized_unique_and_point_to_real_heads():
 
 def test_bank_side_rows_are_not_heads():
     assert not any(s.lower() in {"cash at bank", "bank account"} for _, s in _heads())
+    # placeholders like "(bank-side)" must never become heads or alias targets
+    assert not any(s.startswith("(") for _, s in _heads())
+    assert not any(s.startswith("(") for _, _, _, s in _aliases())
