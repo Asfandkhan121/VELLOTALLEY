@@ -67,3 +67,35 @@ export interface BankProfileOption {
   value: string
   label: string
 }
+
+export interface ClientHead {
+  id: string
+  name: string
+  section: string | null
+  code: string | null
+  source: 'trial_balance' | 'cash_book' | 'manual'
+  confirmed_at: string | null
+}
+
+export interface HeadProposal {
+  name: string
+  section: string | null
+  code: string | null
+  row: number
+}
+
+export interface HeadProposalSheet {
+  sheet: string
+  entity: string | null
+  period: string | null
+  stated_basis: string | null
+  hierarchy: boolean
+  warnings: string[]
+  evidence: Record<string, string[]>
+  heads: HeadProposal[]
+}
+
+export interface ConfirmHeadsResult {
+  created: number
+  skipped_existing: number
+}

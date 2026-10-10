@@ -84,6 +84,16 @@ export default function ClientsPage() {
                 <FileText aria-hidden="true" />
                 View statements
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                nativeButton={false}
+                render={<Link href={`/clients/${client.id}/heads`} />}
+              >
+                <Users aria-hidden="true" />
+                Account heads
+              </Button>
             </li>
           ))}
         </ul>
