@@ -12,6 +12,7 @@ import {
   UserCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PhaseJourney } from '@/components/shared/phase-journey'
 
 function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
   return (
@@ -53,6 +54,16 @@ export function HowItWorks() {
             </li>
           ))}
         </ol>
+      </div>
+    </section>
+  )
+}
+
+export function ProductRoadmap({ signedIn }: { signedIn: boolean }) {
+  return (
+    <section id="workflow" className="scroll-mt-20 border-b bg-card/40">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+        <PhaseJourney signedIn={signedIn} />
       </div>
     </section>
   )

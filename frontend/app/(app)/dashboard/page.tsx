@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatementsTable } from '@/components/app/statements-table'
+import { PhaseJourney } from '@/components/shared/phase-journey'
 import { EmptyState, ErrorState, PageHeader } from '@/components/shared/states'
 import { useClients, useClientMap, useStatements } from '@/lib/hooks'
 import { displayStatus } from '@/lib/format'
@@ -82,7 +83,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Convert bank statement PDFs into reviewed Excel exports, and keep track of what still needs your attention."
+        description="Convert bank-statement PDFs to Excel today, then follow the planned path toward categorized bookkeeping data and financial statements."
         actions={
           <Button nativeButton={false} render={<Link href="/statements/new" />}>
             <Plus aria-hidden="true" />
@@ -90,6 +91,8 @@ export default function DashboardPage() {
           </Button>
         }
       />
+
+      <PhaseJourney signedIn />
 
       <section aria-label="Overview" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon={Users} label="Clients" value={clientCount} loading={loading} />

@@ -10,6 +10,7 @@ export function SiteFooter() {
           <p className="text-sm text-muted-foreground">Bank statements into structured accounting data.</p>
         </div>
         <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <Link href="/#workflow" className="hover:text-foreground">Our roadmap</Link>
           <Link href="/#features" className="hover:text-foreground">Features</Link>
           <Link href="/#security" className="hover:text-foreground">Security</Link>
           <Link href="/privacy" className="hover:text-foreground">Privacy</Link>

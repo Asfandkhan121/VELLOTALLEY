@@ -17,8 +17,11 @@ shadcn/Base UI), nothing deployed yet, Phase 1 code-complete.
 3. **Secrets never go in frontend code.** Service-role key and any
    configured LLM provider key — backend-only, always.
 4. **`statement_notes`/`demand_signals` are read-and-store only.**
-5. **Don't build Phase 2/3** (categorization, Trial Balance, financial
-   statements) until Phase 1 has real usage data.
+5. **Keep the product phases distinct.** Phase 1 is only bank-statement
+   PDF-to-Excel conversion. Phase 2 categorizes raw cash books and other
+   supporting records into reviewed Main Heads/Sub Heads. Phase 3 builds
+   the Trial Balance and financial statements from reviewed data. Do not
+   present future-phase workflows as implemented when they are not.
 
 ## The one frontend-specific trap
 
