@@ -7,6 +7,8 @@ from typing import Any, Callable
 from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile, status
+from pydantic import BaseModel, Field, field_validator
+from starlette.concurrency import run_in_threadpool
 from starlette.background import BackgroundTask
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,12 +19,42 @@ from heuristic_parser import parse_statement_heuristic
 from llm_parser import parse_statement_llm_configured, LLMExtractionError
 
 from nlp import TransactionInput, analyze_transactions
+from trial_balance import basis_evidence, read_workbook
 
 from .config import Settings
 from .repository import SupabaseRepository, month_start_now
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
+MAX_TRIAL_BALANCE_BYTES = 10 * 1024 * 1024
+
+
+class ConfirmedHead(BaseModel):
+    name: str = Field(max_length=200)
+    section: str | None = Field(default=None, max_length=200)
+    code: str | None = Field(default=None, max_length=50)
+
+    @field_validator("name", "section", "code")
+    @classmethod
+    def _stripped(cls, value: str | None) -> str | None:
+        value = None if value is None else value.strip()
+        return value or None  # blank section/code means "not given"; a blank name is rejected below
+
+    @field_validator("name")
+    @classmethod
+    def _name_required(cls, value: str | None) -> str:
+        if not value:
+            raise ValueError("Head name must not be empty.")
+        return value
+
+
+class ConfirmHeadsRequest(BaseModel):
+    source: str = Field(pattern="^(trial_balance|cash_book|manual)$")
+    heads: list[ConfirmedHead] = Field(min_length=1, max_length=1000)
+
+
+def _head_key(name: str) -> str:
+    return " ".join(name.lower().split())  # mirrors the unique index on client_account_heads
 logger = logging.getLogger(__name__)
 
 
@@ -62,6 +94,58 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
     def list_account_heads(user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
         # Global reference data (not per-user); auth is still required.
         return repo.list_account_heads()
+
+    def _owned_client(client_id: UUID, user_id: str) -> None:
+        if not repo.client_belongs_to_user(client_id, user_id):
+            raise HTTPException(status_code=404, detail="Client not found.")
+
+    @app.get("/v1/clients/{client_id}/heads")
+    def list_client_heads(client_id: UUID, user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
+        _owned_client(client_id, user_id)
+        return repo.list_client_heads(client_id, user_id)
+
+    @app.post("/v1/clients/{client_id}/heads/proposals")
+    async def propose_client_heads(client_id: UUID, file: UploadFile = File(...), user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
+        """Read a prior-year trial balance and return the heads it contains. Stores nothing;
+        the user must confirm via POST /heads. Suggestions only, never a basis or a classification."""
+        _owned_client(client_id, user_id)
+        if not file.filename or not file.filename.lower().endswith(".xlsx"):
+            raise HTTPException(status_code=415, detail="Upload the trial balance as an .xlsx file.")
+        content = await file.read(MAX_TRIAL_BALANCE_BYTES + 1)
+        if len(content) > MAX_TRIAL_BALANCE_BYTES:
+            raise HTTPException(status_code=413, detail="The trial balance file is too large (10 MB limit).")
+        if not content.startswith(b"PK"):
+            raise HTTPException(status_code=415, detail="The upload is not a valid .xlsx file.")
+        try:
+            sheets = await run_in_threadpool(read_workbook, content)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="Could not read this workbook.") from exc
+        return [
+            {
+                "sheet": tb.sheet, "entity": tb.entity, "period": tb.period_text, "stated_basis": tb.stated_basis,
+                "hierarchy": tb.hierarchy, "warnings": tb.warnings,
+                "evidence": basis_evidence(tb.accounts),
+                "heads": [{"name": a.name, "section": a.section, "code": a.code, "row": a.row} for a in tb.accounts],
+            }
+            for tb in sheets
+        ]
+
+    @app.post("/v1/clients/{client_id}/heads", status_code=status.HTTP_201_CREATED)
+    def confirm_client_heads(client_id: UUID, body: ConfirmHeadsRequest, user_id: str = Depends(current_user)) -> dict[str, Any]:
+        """Store heads the user has confirmed. user_id always comes from the token, never the body."""
+        _owned_client(client_id, user_id)
+        existing = {_head_key(h["name"]) for h in repo.list_client_heads(client_id, user_id)}
+        fresh: list[dict[str, Any]] = []
+        skipped: list[str] = []
+        for head in body.heads:
+            key = _head_key(head.name)
+            if key in existing:
+                skipped.append(head.name)
+                continue
+            existing.add(key)
+            fresh.append(head.model_dump())
+        created = repo.add_client_heads(client_id, user_id, body.source, fresh) if fresh else []
+        return {"created": len(created), "skipped_existing": skipped}
 
     @app.delete("/v1/account", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
     def delete_account(user_id: str = Depends(current_user)) -> Response:

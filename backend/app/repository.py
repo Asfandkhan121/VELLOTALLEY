@@ -42,6 +42,20 @@ class SupabaseRepository:
         response = self.client.table("account_heads").select("id,main_head,sub_head").order("main_head").order("sub_head").execute()
         return response.data or []
 
+    def list_client_heads(self, client_id: UUID, user_id: str) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("client_account_heads")
+            .select("id,name,section,code,source,confirmed_at")
+            .eq("client_id", str(client_id)).eq("user_id", user_id)
+            .order("section").order("name").execute()
+        )
+        return response.data or []
+
+    def add_client_heads(self, client_id: UUID, user_id: str, source: str, heads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        rows = [{"client_id": str(client_id), "user_id": user_id, "source": source, "name": h["name"], "section": h.get("section"), "code": h.get("code")} for h in heads]
+        response = self.client.table("client_account_heads").insert(rows).execute()
+        return response.data or []
+
     def client_belongs_to_user(self, client_id: UUID, user_id: str) -> bool:
         response = self.client.table("clients").select("id").eq("id", str(client_id)).eq("user_id", user_id).maybe_single().execute()
         return response is not None and response.data is not None
