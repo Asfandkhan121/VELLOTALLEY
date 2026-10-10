@@ -38,6 +38,21 @@ class SupabaseRepository:
         response = self.client.table("clients").select("id,name,created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
         return response.data or []
 
+    def get_client_basis(self, client_id: UUID, user_id: str) -> dict[str, Any]:
+        response = self.client.table("clients").select("accounting_basis,basis_confirmed_at").eq("id", str(client_id)).eq("user_id", user_id).single().execute()
+        return response.data
+
+    def set_client_basis(self, client_id: UUID, user_id: str, basis: str | None) -> dict[str, Any]:
+        confirmed_at = datetime.now(timezone.utc).isoformat() if basis else None
+        response = (
+            self.client.table("clients")
+            .update({"accounting_basis": basis, "basis_confirmed_at": confirmed_at})
+            .eq("id", str(client_id))
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return response.data[0]
+
     def list_account_heads(self) -> list[dict[str, Any]]:
         response = self.client.table("account_heads").select("id,main_head,sub_head").order("main_head").order("sub_head").execute()
         return response.data or []
