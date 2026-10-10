@@ -45,7 +45,7 @@ export function ClientHeads({ clientId }: { clientId: string }) {
     setBusy(true)
     try {
       const r = await confirmClientHeads(clientId, { source: 'trial_balance', heads })
-      toast.success(`${r.created} heads saved, ${r.skipped_existing} already existed`)
+      toast.success(`${r.created} heads saved, ${r.skipped_existing.length} already existed`)
       setSheets(null)
       await mutate(apiKeys.clientHeads(clientId))
     } catch (e) {

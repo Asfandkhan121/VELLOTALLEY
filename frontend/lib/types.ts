@@ -97,5 +97,5 @@ export interface HeadProposalSheet {
 
 export interface ConfirmHeadsResult {
   created: number
-  skipped_existing: number
+  skipped_existing: string[]
 }
