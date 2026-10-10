@@ -94,6 +94,16 @@ export default function ClientsPage() {
                 <Users aria-hidden="true" />
                 Account heads
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start"
+                nativeButton={false}
+                render={<Link href={`/clients/${client.id}/basis`} />}
+              >
+                <Users aria-hidden="true" />
+                Accounting basis
+              </Button>
             </li>
           ))}
         </ul>

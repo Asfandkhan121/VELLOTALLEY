@@ -1,4 +1,7 @@
 import type {
+  AccountingBasis,
+  BasisRecommendation,
+  ClientBasis,
   ClientHead,
   ConfirmHeadsResult,
   HeadProposalSheet,
@@ -185,7 +188,25 @@ export function confirmClientHeads(
   })
 }
 
+export function recommendClientBasis(clientId: string, answers: Record<string, string>) {
+  return requestJson<BasisRecommendation>(`/v1/clients/${clientId}/basis/recommendation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers }),
+  })
+}
+
+export function setClientBasis(clientId: string, basis: AccountingBasis | 'unset') {
+  return requestJson<ClientBasis>(`/v1/clients/${clientId}/basis`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ basis }),
+  })
+}
+
 export const apiKeys = {
+  basisQuestions: '/v1/basis/questions',
+  clientBasis: (id: string) => `/v1/clients/${id}/basis`,
   clientHeads: (id: string) => `/v1/clients/${id}/heads`,
   clients: '/v1/clients',
   accountHeads: '/v1/account-heads',

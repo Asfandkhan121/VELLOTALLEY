@@ -19,6 +19,7 @@ from heuristic_parser import parse_statement_heuristic
 from llm_parser import parse_statement_llm_configured, LLMExtractionError
 
 from nlp import TransactionInput, analyze_transactions
+from basis_recommend import QUESTIONS, InvalidAnswers, recommend
 from trial_balance import basis_evidence, read_workbook
 
 from .config import Settings
@@ -51,6 +52,15 @@ class ConfirmedHead(BaseModel):
 class ConfirmHeadsRequest(BaseModel):
     source: str = Field(pattern="^(trial_balance|cash_book|manual)$")
     heads: list[ConfirmedHead] = Field(min_length=1, max_length=1000)
+
+
+class RecommendRequest(BaseModel):
+    answers: dict[str, str]
+
+
+class BasisRequest(BaseModel):
+    # "unset" is the explicit "not sure" answer; it clears any earlier confirmation.
+    basis: str = Field(pattern=r"^(accrual|cash|modified_cash|unset)$")
 
 
 def _head_key(name: str) -> str:
@@ -146,6 +156,30 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
             fresh.append(head.model_dump())
         created = repo.add_client_heads(client_id, user_id, body.source, fresh) if fresh else []
         return {"created": len(created), "skipped_existing": skipped}
+
+    @app.get("/v1/basis/questions")
+    def basis_questions(user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
+        return QUESTIONS
+
+    @app.post("/v1/clients/{client_id}/basis/recommendation")
+    def recommend_client_basis(client_id: UUID, body: RecommendRequest, user_id: str = Depends(current_user)) -> dict[str, Any]:
+        """Suggestion only: stores nothing. The user confirms via PUT /basis."""
+        _owned_client(client_id, user_id)
+        try:
+            return recommend(body.answers)
+        except InvalidAnswers as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/v1/clients/{client_id}/basis")
+    def get_client_basis(client_id: UUID, user_id: str = Depends(current_user)) -> dict[str, Any]:
+        _owned_client(client_id, user_id)
+        return repo.get_client_basis(client_id, user_id)
+
+    @app.put("/v1/clients/{client_id}/basis")
+    def set_client_basis(client_id: UUID, body: BasisRequest, user_id: str = Depends(current_user)) -> dict[str, Any]:
+        """Store the basis the user chose. Never inferred server-side: a recommendation is only a suggestion."""
+        _owned_client(client_id, user_id)
+        return repo.set_client_basis(client_id, user_id, None if body.basis == "unset" else body.basis)
 
     @app.delete("/v1/account", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
     def delete_account(user_id: str = Depends(current_user)) -> Response:
