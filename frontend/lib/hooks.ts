@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import { ApiError, apiKeys, fetcher } from '@/lib/api'
-import type { AccountHead, Client, Statement, StatementNote, Transaction } from '@/lib/types'
+import type { AccountHead, Client, ClientHead, Statement, StatementNote, Transaction } from '@/lib/types'
 
 const shouldRetry = (error: unknown) =>
   !(error instanceof ApiError) || (error.status >= 500 && error.status !== 503) || error.status === 0
@@ -44,4 +44,8 @@ export function useNotes(id: string) {
 export function useClientMap() {
   const { data } = useClients()
   return new Map((data ?? []).map((client) => [client.id, client.name]))
+}
+
+export function useClientHeads(clientId: string) {
+  return useSWR<ClientHead[]>(apiKeys.clientHeads(clientId), fetcher, baseOptions)
 }
