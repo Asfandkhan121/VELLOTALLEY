@@ -20,8 +20,13 @@ behavioral contract.
    repo's git history going forward. Check explicitly whenever touching
    frontend code.
 6. **`statement_notes`/`demand_signals` are read-and-store only.**
-7. **Do not start Phase 2 or 3** (categorization/Trial Balance/financial
-   statements). See `PRODUCT.md` for why.
+7. **Phase 2 and Phase 3 are authorized for incremental implementation**
+   as defined in `PRODUCT.md`: Phase 2 categorizes raw cash books and
+   supporting data into reviewed Main Heads/Sub Heads; Phase 3 prepares a
+   Trial Balance and reviewed financial statements from that data. The
+   owner authorized this roadmap on 2026-10-10. Preserve accounting
+   safeguards and do not claim a phase is complete until its end-to-end
+   workflow is implemented and verified.
 8. **Do not start Stripe/billing** until the frontend is fully built,
    deployed, and working end-to-end.
 9. **This frontend is Base UI, not Radix** — use `render={<Element/>}`,

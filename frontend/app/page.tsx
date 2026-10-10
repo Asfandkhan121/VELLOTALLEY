@@ -1,5 +1,5 @@
 import { Hero } from '@/components/landing/hero'
-import { Faq, Features, FinalCta, HowItWorks, Security } from '@/components/landing/sections'
+import { Faq, Features, FinalCta, HowItWorks, ProductRoadmap, Security } from '@/components/landing/sections'
 import { SiteFooter } from '@/components/landing/site-footer'
 import { SiteHeader } from '@/components/landing/site-header'
 import { createClient } from '@/lib/supabase/server'
@@ -17,6 +17,7 @@ export default async function HomePage() {
       <main>
         <Hero signedIn={signedIn} />
         <HowItWorks />
+        <ProductRoadmap signedIn={signedIn} />
         <Features />
         <Security />
         <Faq />
