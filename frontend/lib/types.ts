@@ -99,3 +99,22 @@ export interface ConfirmHeadsResult {
   created: number
   skipped_existing: string[]
 }
+
+export type AccountingBasis = 'accrual' | 'cash' | 'modified_cash'
+
+export interface ClientBasis {
+  accounting_basis: AccountingBasis | null
+  basis_confirmed_at: string | null
+}
+
+export interface BasisQuestion {
+  id: string
+  text: string
+  why: string
+  options: { id: string; label: string; signal: string }[]
+}
+
+export interface BasisRecommendation {
+  recommendation: AccountingBasis | null
+  reason: string
+}
