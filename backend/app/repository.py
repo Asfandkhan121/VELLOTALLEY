@@ -38,6 +38,10 @@ class SupabaseRepository:
         response = self.client.table("clients").select("id,name,created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
         return response.data or []
 
+    def list_account_heads(self) -> list[dict[str, Any]]:
+        response = self.client.table("account_heads").select("id,main_head,sub_head").order("main_head").order("sub_head").execute()
+        return response.data or []
+
     def client_belongs_to_user(self, client_id: UUID, user_id: str) -> bool:
         response = self.client.table("clients").select("id").eq("id", str(client_id)).eq("user_id", user_id).maybe_single().execute()
         return response is not None and response.data is not None

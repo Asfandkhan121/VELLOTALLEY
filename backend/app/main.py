@@ -58,6 +58,11 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
     def list_clients(user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
         return repo.list_clients(user_id)
 
+    @app.get("/v1/account-heads")
+    def list_account_heads(user_id: str = Depends(current_user)) -> list[dict[str, Any]]:
+        # Global reference data (not per-user); auth is still required.
+        return repo.list_account_heads()
+
     @app.delete("/v1/account", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
     def delete_account(user_id: str = Depends(current_user)) -> Response:
         try:
