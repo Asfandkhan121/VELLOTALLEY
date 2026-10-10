@@ -53,6 +53,11 @@ class ConfirmHeadsRequest(BaseModel):
     heads: list[ConfirmedHead] = Field(min_length=1, max_length=1000)
 
 
+class BasisRequest(BaseModel):
+    # "unset" is the explicit "not sure" answer; it clears any earlier confirmation.
+    basis: str = Field(pattern=r"^(accrual|cash|modified_cash|unset)$")
+
+
 def _head_key(name: str) -> str:
     return " ".join(name.lower().split())  # mirrors the unique index on client_account_heads
 logger = logging.getLogger(__name__)
@@ -146,6 +151,17 @@ def create_app(settings: Settings | None = None, repository: Any | None = None) 
             fresh.append(head.model_dump())
         created = repo.add_client_heads(client_id, user_id, body.source, fresh) if fresh else []
         return {"created": len(created), "skipped_existing": skipped}
+
+    @app.get("/v1/clients/{client_id}/basis")
+    def get_client_basis(client_id: UUID, user_id: str = Depends(current_user)) -> dict[str, Any]:
+        _owned_client(client_id, user_id)
+        return repo.get_client_basis(client_id, user_id)
+
+    @app.put("/v1/clients/{client_id}/basis")
+    def set_client_basis(client_id: UUID, body: BasisRequest, user_id: str = Depends(current_user)) -> dict[str, Any]:
+        """Store the basis the user chose. Never inferred server-side: a recommendation is only a suggestion."""
+        _owned_client(client_id, user_id)
+        return repo.set_client_basis(client_id, user_id, None if body.basis == "unset" else body.basis)
 
     @app.delete("/v1/account", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
     def delete_account(user_id: str = Depends(current_user)) -> Response:
