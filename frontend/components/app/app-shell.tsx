@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
+  BookOpen,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clients', label: 'Clients', icon: Users },
   { href: '/statements', label: 'Statements', icon: FileText },
+  { href: '/chart-of-accounts', label: 'Chart of accounts', icon: BookOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
