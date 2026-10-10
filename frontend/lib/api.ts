@@ -1,4 +1,7 @@
 import type {
+  ClientHead,
+  ConfirmHeadsResult,
+  HeadProposalSheet,
   Client,
   ExtractionResult,
   Statement,
@@ -164,7 +167,26 @@ export async function downloadExcel(statementId: string, fallbackName?: string) 
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+export function proposeClientHeads(clientId: string, file: File) {
+  return requestJson<HeadProposalSheet[]>(`/v1/clients/${clientId}/heads/proposals`, {
+    method: 'POST',
+    body: formBody({ file }),
+  })
+}
+
+export function confirmClientHeads(
+  clientId: string,
+  body: { source: ClientHead['source']; heads: { name: string; section?: string | null; code?: string | null }[] },
+) {
+  return requestJson<ConfirmHeadsResult>(`/v1/clients/${clientId}/heads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 export const apiKeys = {
+  clientHeads: (id: string) => `/v1/clients/${id}/heads`,
   clients: '/v1/clients',
   accountHeads: '/v1/account-heads',
   statements: '/v1/statements',
